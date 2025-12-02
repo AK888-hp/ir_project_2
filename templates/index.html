@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Multimodal AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    </head>
+<body>
+    <nav>
+        <a href="{{ url_for('serve_index') }}"><b>Chatbot Search</b></a> | <a href="{{ url_for('serve_admin') }}">Admin Page</a>
+    </nav>
+    <div class="container">
+        <h1>Medical Multimodal Chatbot</h1>
+        <p>Ask a question or upload an image to search your documents/images.</p>
+        
+        <div class="search-area">
+            <input type="file" id="unifiedInputFile" accept="image/png, image/jpeg" title="Upload Image">
+            <input type="text" id="unifiedInputText" placeholder="e.g., 'What are the symptoms of fever?' or 'Find similar images'">
+            <button id="unifiedSearchButton">Send</button>
+        </div>
+        
+        <div id="unifiedStatus" class="status"></div>
+        
+        <div id="results-area">
+            <div id="text-results-box">Welcome to the unified medical search. Type your query or upload an image above.</div>
+        </div>
+
+    </div>
+    <script>
+        const UNIFIED_CHAT_API = 'http://localhost:8000/chat'; 
+
+        const searchButton = document.getElementById('unifiedSearchButton');
+        const statusEl = document.getElementById('unifiedStatus');
+        const resultsEl = document.getElementById('results-area');
+
+        function displayResults(type, data) {
+            resultsEl.innerHTML = '';
+            
+            if (type === 'Image') {
+                statusEl.innerText = `Image Search Complete. Found ${data.results.length} similar images.`;
+                const grid = document.createElement('div');
+                grid.id = 'image-results-grid';
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(base64DataUrl => {
+                        const img = document.createElement('img');
+                        img.src = base64DataUrl; 
+                        grid.appendChild(img);
+                    });
+                    resultsEl.appendChild(grid);
+                } else {
+                    resultsEl.innerHTML = '<div id="text-results-box">No image results found in the index.</div>';
+                }
+            } else if (type === 'Text') {
+                statusEl.innerText = `Document Search Complete. Found ${data.documents[0].length} relevant documents.`;
+                const box = document.createElement('div');
+                box.id = 'text-results-box';
+
+                if (data.documents && data.documents.length > 0 && data.documents[0].length > 0) {
+                    data.documents[0].forEach((doc, i) => {
+                        const dist = data.distances[0][i].toFixed(4);
+                        const el = document.createElement('pre');
+                        el.innerText = `--- Result ${i + 1} (Distance: ${dist}) ---\n${doc}`;
+                        box.appendChild(el);
+                    });
+                    resultsEl.appendChild(box);
+                } else {
+                    resultsEl.innerHTML = '<div id="text-results-box">No text documents found in the index for this query.</div>';
+                }
+            }
+        }
+
+        searchButton.addEventListener('click', async () => {
+            const file = document.getElementById('unifiedInputFile').files[0];
+            const text = document.getElementById('unifiedInputText').value.trim();
+
+            if (!file && !text) {
+                statusEl.innerText = 'Please enter a query or select an image.';
+                return;
+            }
+
+            statusEl.innerText = 'Processing your request...';
+
+            const formData = new FormData();
+            
+            if (file) {
+                formData.append('image_file', file);
+                if (!text) { 
+                    document.getElementById('unifiedInputText').value = ''; 
+                }
+            }
+            if (text) {
+                formData.append('text_query', text);
+            }
+            
+            resultsEl.innerHTML = ''; 
+
+            try {
+                const response = await fetch(UNIFIED_CHAT_API, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.results) {
+                    displayResults('Image', data);
+                } else if (data.documents) {
+                    displayResults('Text', data);
+                } else {
+                    statusEl.innerText = 'Received unknown response structure.';
+                }
+
+            } catch (error) { 
+                console.error('Unified Search Error:', error); 
+                statusEl.innerText = `An error occurred: ${error.message}`; 
+            }
+        });
+    </script>
+</body>
+</html>

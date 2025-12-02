@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+numpy
+pillow
+jinja2
+python-multipart
+requests
+python-dotenv
+google-search-results
