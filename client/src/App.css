@@ -1,10 +1,13 @@
+html,
+body,
 #root {
+  margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  background-color: #f5f5f5; /* light grey page background */
+  color: #000;               /* make sure text is black, not white */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .logo {
